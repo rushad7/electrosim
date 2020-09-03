@@ -18,7 +18,8 @@ class CurrentSource():
             self._t = np.arange(0, 20, 0.01)
             self._angular_freq = angular_freq
             self._phase_angle = phase_angle
-            self._I = peak_current*np.sin(self._angular_freq*self._t + self._phase_angle)
+            self._peak_current = peak_current
+            self._I = self._peak_current*np.sin(self._angular_freq*self._t + self._phase_angle)
             
 class VoltageSource():
     
@@ -31,14 +32,15 @@ class VoltageSource():
             self._t = np.arange(0, 20, 0.01)
             self._angular_freq = angular_freq
             self._phase_angle = phase_angle
-            self._V = peak_voltage*np.sin(self._angular_freq*self._t + self._phase_angle)
+            self._peak_voltage = peak_voltage
+            self._V = self._peak_voltage*np.sin(self._angular_freq*self._t + self._phase_angle)
 
 class Element():
     
     class Resistor():
         
         def __init__(self, resistance):
-            self._resistance = resistance
+            self.resistance = resistance
 
     class Capacitor():
         def __init__(self, capacitance):
@@ -68,6 +70,7 @@ class Circuit():
             self._node_voltage = []
             self._element_current = []
             self._temp_dict = {}
+            self._element_index = 0
             
         def add(self, element, node1, node2):
             self._node1 = node1
@@ -98,12 +101,23 @@ class Circuit():
                     temp_dict_copy = self._temp_dict.copy()
                     self._element_current.append(temp_dict_copy)
                     self._temp_dict.clear()
-                
-            if self._node_voltage[0]{'01'} != None:
-                #vs
-            elif self._element_current[0]{'01'} != None:
-                #cs
-                
-                
+            
+            def getSource():
+                if list(self._node_voltage[0].values())[0] == None:
+                    return 'cs'
+                elif list(self._element_current[0].values())[0] == None:
+                    return 'vs'
+            
             if type(self._element) == Element.Resistor:
-                
+                source = getSource()
+                if source == 'cs':
+                    self._temp_dict[str(self._node1) + str(self._node2)] = list(self._element_current[self._element_index].values())[0]
+                    temp_dict_copy = self._temp_dict.copy()
+                    self._element_current.append(temp_dict_copy)
+                    self._temp_dict.clear()
+                    
+                    self._temp_dict[str(self._node1) + str(self._node2)] = list(self._element_current[self._element_index].values())[0]*element.resistance
+                    temp_dict_copy = self._temp_dict.copy()
+                    self._node_voltage.append(temp_dict_copy)
+                    self._temp_dict.clear()
+                    self._element_index = self._element_index + 1
