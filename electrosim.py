@@ -12,6 +12,7 @@ class CurrentSource():
     class DC():
         def __init__(self, current):
             self._I = current*np.ones(len(np.arange(0, 20, 0.01)))
+            self._t = np.arange(0, 20, 0.01)
     
     class AC():        
         def __init__(self, peak_current, angular_freq, phase_angle):
@@ -26,6 +27,7 @@ class VoltageSource():
     class DC():
         def __init__(self, voltage):
             self._V = voltage*np.ones(len(np.arange(0, 20, 0.01)))
+            self._t = np.arange(0, 20, 0.01)
     
     class AC():        
         def __init__(self, peak_voltage, angular_freq, phase_angle):
@@ -67,8 +69,7 @@ class Circuit():
     class Mesh():
         
         def __init__(self):
-            self._node_voltage = []
-            self._element_current = []
+            self._node = []
             self._temp_dict = {}
             self._element_index = 0
             
@@ -78,46 +79,34 @@ class Circuit():
             self._element = element
             
             # To add condition elem1 < > elem2
-            if len(self._node_voltage) == 0 and len(self._node_voltage) == 0:
-                
-                if type(self._element) == CurrentSource.DC or type(self._element) == CurrentSource.AC:
-                    self._temp_dict[str(self._node1) + str(self._node2)] = self._element._I
-                    temp_dict_copy = self._temp_dict.copy()
-                    self._element_current.append(temp_dict_copy)
-                    self._temp_dict.clear()
-                    
-                    self._temp_dict[str(self._node1) + str(self._node2)] = None
-                    temp_dict_copy = self._temp_dict.copy()
-                    self._node_voltage.append(temp_dict_copy)
-                    self._temp_dict.clear()
-                    
-                elif type(self._element) == VoltageSource.DC or type(self._element) == VoltageSource.AC:
-                    self._temp_dict[str(self._node1) + str(self._node2)] = self._element._V
-                    temp_dict_copy = self._temp_dict.copy()
-                    self._node_voltage.append(temp_dict_copy)
-                    self._temp_dict.clear()
-                    
-                    self._temp_dict[str(self._node1) + str(self._node2)] = None
-                    temp_dict_copy = self._temp_dict.copy()
-                    self._element_current.append(temp_dict_copy)
-                    self._temp_dict.clear()
-            
+            if len(self._node) == 0:
+                self._temp_dict[str(self._node1) + str(self._node2)] = self._element
+                temp_dict_copy = self._temp_dict.copy()
+                self._node.append(temp_dict_copy)
+                self._temp_dict.clear()
+            else:
+                self._temp_dict[str(self._node1) + str(self._node2)] = self._element
+                temp_dict_copy = self._temp_dict.copy()
+                self._node.append(temp_dict_copy)
+                self._temp_dict.clear()
+                self._element_index = self._element_index + 1
+
             def getSource():
-                if list(self._node_voltage[0].values())[0] == None:
-                    return 'cs'
-                elif list(self._element_current[0].values())[0] == None:
-                    return 'vs'
+                
+                if type(list(self._node[0].values())[0]) == CurrentSource.DC:
+                    source = 'cs'
+                    source_type = 'DC'
+                elif type(list(self._node[0].values())[0]) == CurrentSource.AC:
+                    source = 'cs'
+                    source_type = 'AC'
+                
+                elif type(list(self._node[0].values())[0]) == VoltageSource.DC:
+                    source = 'vs'
+                    source_type = 'DC'
+                elif type(list(self._node[0].values())[0]) == VoltageSource.AC:
+                    source = 'vs'
+                    source_type = 'AC'
+                
+                return source, source_type
             
-            if type(self._element) == Element.Resistor:
-                source = getSource()
-                if source == 'cs':
-                    self._temp_dict[str(self._node1) + str(self._node2)] = list(self._element_current[self._element_index].values())[0]
-                    temp_dict_copy = self._temp_dict.copy()
-                    self._element_current.append(temp_dict_copy)
-                    self._temp_dict.clear()
-                    
-                    self._temp_dict[str(self._node1) + str(self._node2)] = list(self._element_current[self._element_index].values())[0]*element.resistance
-                    temp_dict_copy = self._temp_dict.copy()
-                    self._node_voltage.append(temp_dict_copy)
-                    self._temp_dict.clear()
-                    self._element_index = self._element_index + 1
+            source, source_type = getSource()
