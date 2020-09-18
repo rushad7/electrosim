@@ -102,7 +102,7 @@ class Circuit():
                     
                 temp_eq = 0
                 temp_eq_list = []
-                eq_list = []
+                node_check = []
                 
                 for i in range(len(self._node)):
                     current_node = (list(self._node[i].keys())[0][0], list(self._node[i].keys())[0][1])
@@ -125,20 +125,21 @@ class Circuit():
                                 node1 = sympy.core.symbols(node1)
                                 node2 = sympy.core.symbols(node2)
                                 
-                                impedance = list(self._node[i].values())[0]._name
-                                temp_eq  = temp_eq - (node1 - node2)/impedance
-                                temp_eq_list.append(temp_eq)
-                                temp_eq = 0
+                                if len(node_check) == 0:
+                                    node_check.append(node1)
+                                    node_check.append(node2)
+                                else:
+                                    if node1 == node_check[0] or node2 == node_check[1]:
+                                        impedance = list(self._node[i].values())[0]._name
+                                        temp_eq  = temp_eq - (node1 - node2)/impedance
+                                        temp_eq_list.append(temp_eq)
+                                    else:
+                                        impedance = list(self._node[i].values())[0]._name
+                                        temp_eq  = temp_eq - (node1 - node2)/impedance
+                                        temp_eq_list.append(temp_eq)
+                                        temp_eq = 0
+                                        node_check.clear()
                                 
-            #return temp_eq_list
-            for i in range(len(temp_eq_list)):
-                eq_list_copy1 = temp_eq_list[:]
-                eq_list_copy2 = temp_eq_list[:]
-                
-                if eq_list_copy1[i] in eq_list_copy2.pop(i):
-                    pass
-                else:
-                    #if no common node
-                    sympy.Eq((temp_eq_list[i]+temp_eq_list[i+1]), 0)
+            return temp_eq_list
                     
                     
