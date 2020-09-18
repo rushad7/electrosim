@@ -6,79 +6,55 @@ Created on Tue Aug 25 20:25:08 2020
 """
 
 import numpy as np
-        
+import sympy  
+      
 class CurrentSource():
     
     class DC():
-        def __init__(self, current):
+        def __init__(self, current, name):
             self._t = np.arange(0, 20, 0.01)
-            self._angular_freq = 0
-            self._phase_angle = 0
-            self._peak_current = current
             self._I = current*np.ones(len(self._t))
-            self._V = None
+            self._name = sympy.core.symbols(name)
     
     class AC():        
-        def __init__(self, peak_current, angular_freq, phase_angle):
+        def __init__(self, peak_current, angular_freq, phase_angle, name):
             self._t = np.arange(0, 20, 0.01)
-            self._angular_freq = angular_freq
-            self._phase_angle = phase_angle
-            self._peak_current = peak_current
-            self._I = self._peak_current*np.sin(self._angular_freq*self._t + self._phase_angle)
-            self._V = None
+            self._I = peak_current*np.sin(self._angular_freq*self._t + self._phase_angle)
+            self._name = sympy.core.symbols(name)
             
 class VoltageSource():
     
     class DC():
-        def __init__(self, voltage):
+        def __init__(self, voltage, name):
             self._t = np.arange(0, 20, 0.01)
-            self._angular_freq = 0
-            self._phase_angle = 0
-            self._peak_voltage = voltage
             self._V = voltage*np.ones(len(self._t))
-            self._I = None
+            self._name = sympy.core.symbols(name)
     
     class AC():        
-        def __init__(self, peak_voltage, angular_freq, phase_angle):
+        def __init__(self, peak_voltage, angular_freq, phase_angle, name):
             self._t = np.arange(0, 20, 0.01)
-            self._angular_freq = angular_freq
-            self._phase_angle = phase_angle
-            self._peak_voltage = peak_voltage
-            self._V = self._peak_voltage*np.sin(self._angular_freq*self._t + self._phase_angle)
-            self._I = None
+            self._V = peak_voltage*np.sin(self._angular_freq*self._t + self._phase_angle)
+            self._name = sympy.core.symbols(name)
 
 class Element():
     
     class Resistor():
         
-        def __init__(self, resistance):
+        def __init__(self, resistance, name):
             self.resistance = resistance
-            self._I = None
-            self._V = None
+            self._name = sympy.core.symbols(name)
 
     class Capacitor():
-        def __init__(self, capacitance):
+        def __init__(self, capacitance, name):
             self.capacitance = capacitance
-            self._I = None
-            self._V = None
+            self._name = sympy.core.symbols(name)
         
     class Inductor():
-        def __init__(self, inductance):
+        def __init__(self, inductance, name):
             self.inductance = inductance
+            self._name = sympy.core.symbols(name)
             
 class Circuit():
-    
-    '''
-    class Series():
-        def __init__(self, element1, element2):
-            self._element1 = element1
-            self._element2 = element2
-            
-    class Parallel():
-        def __init__(self, element1, element2):
-            self._element1 = element1
-            self._element2 = element2
-      '''
 
     class Mesh():
         
@@ -121,44 +97,48 @@ class Circuit():
             
         def solve(self):
             
-            source_type = self._getSource()
-            source = list(self._node[0].values())[0]
-            
-            if source_type == 'cs':
-                self._I = source._I
-                num_elem = len(self._node)
-                total_impedance = 0
+            source = self._getSource()
+            if source == 'cs':
+                    
+                temp_eq = 0
+                temp_eq_list = []
+                eq_list = []
                 
-                for i in range(num_elem): 
+                for i in range(len(self._node)):
+                    current_node = (list(self._node[i].keys())[0][0], list(self._node[i].keys())[0][1])
+                    current_node_ep = current_node[1]
                     
-                    current_element = list(self._node[i].values())[0]
-                    
-                    if type(current_element) == Element.Resistor:
-                        current_element._I = self._I
-                        current_element._V = self._I*current_element.resistance
-                        total_impedance = total_impedance + current_element.resistance
+                    for j in range(len(self._node)):
+                        next_node = (list(self._node[j].keys())[0][0], list(self._node[j].keys())[0][1])
+                        next_node_sp = next_node[0]
                         
-                    elif type(current_element) == Element.Capacitor:
-                        try:
-                            impedance = 1/(source._angular_freq*current_element.capacitance)
-                            current_element._I = self._I
-                            current_element._V = (-1)*source._peak_current*impedance*np.cos(source._angular_freq*source._t + source._phase_angle)
-                            total_impedance = total_impedance + impedance
-                        except ZeroDivisionError:
-                            current_element._I = self._I
-                            current_element._V = (source._I*source._t)/current_element.capacitance
+                        if current_node_ep == next_node_sp:
                             
-                        
-                    elif type(current_element) == Element.Inductor:
-                        impedance = source.angular_freq*current_element.inductance
-                        current_element._I = self._I
-                        current_element._V = source._peak_current*impedance*np.cos(source._angular_freq*source._t + source._phase_angle)
-                        total_impedance = total_impedance + impedance
+                            if type(list(self._node[i].values())[0]) == CurrentSource.DC or type(list(self._node[i].values())[0]) == CurrentSource.AC:
+                                temp_eq = temp_eq + list(self._node[i].values())[0]._name
+                                temp_eq_list.append(temp_eq)
+                                temp_eq = 0
+                            else:   
+                                node1 = 'V' + str(current_node[0])
+                                node2 = 'V' + str(current_node[1])
+                                
+                                node1 = sympy.core.symbols(node1)
+                                node2 = sympy.core.symbols(node2)
+                                
+                                impedance = list(self._node[i].values())[0]._name
+                                temp_eq  = temp_eq - (node1 - node2)/impedance
+                                temp_eq_list.append(temp_eq)
+                                temp_eq = 0
+                                
+            #return temp_eq_list
+            for i in range(len(temp_eq_list)):
+                eq_list_copy1 = temp_eq_list[:]
+                eq_list_copy2 = temp_eq_list[:]
                 
-                if type(current_element) == Element.Resistor:
-                    source._V = (current_element._V*total_impedance)/current_element.resistance
-                elif type(current_element) == Element.Capacitor:
-                    source._V = (current_element._V*total_impedance)/current_element.capacitance
-                elif type(current_element) == Element.Resistor:
-                    source._V = (current_element._V*total_impedance)/current_element.inductance
+                if eq_list_copy1[i] in eq_list_copy2.pop(i):
+                    pass
+                else:
+                    #if no common node
+                    sympy.Eq((temp_eq_list[i]+temp_eq_list[i+1]), 0)
+                    
                     
