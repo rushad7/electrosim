@@ -146,7 +146,7 @@ class Circuit():
             var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
             var_tuple = tuple(var_list)
             solution = sympy.linsolve(eq_list, var_tuple)
-    
+            
             last_node_eq = 0
             solution_args = solution.args[0]
             
@@ -155,8 +155,16 @@ class Circuit():
             
             last_node_value = sympy.solve(last_node_eq)[0]
             last_node_var = sympy.core.symbols('V' + str(len(self._node)-1))
-            solution_value = solution.subs(last_node_var, last_node_value)
-            solution_value = solution_value.args
-            solution_value = solution_value[0]
+            
+            if type(last_node_value) == dict:
+                last_node_value = last_node_value[last_node_var]
+                solution_value = solution.subs(last_node_var, last_node_value)
+                solution_value = solution_value.args
+                solution_value = solution_value[0]
+                pass
+            else:
+                solution_value = solution.subs(last_node_var, last_node_value)
+                solution_value = solution_value.args
+                solution_value = solution_value[0]
             
             return solution_value
