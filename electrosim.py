@@ -13,13 +13,15 @@ class CurrentSource():
     class DC():
         def __init__(self, current, name):
             self._t = np.arange(0, 20, 0.01)
-            self._I = current*np.ones(len(self._t))
+            self._I = current
             self._name = sympy.core.symbols(name)
     
     class AC():        
         def __init__(self, peak_current, angular_freq, phase_angle, name):
-            self._t = np.arange(0, 20, 0.01)
-            self._I = peak_current*np.sin(self._angular_freq*self._t + self._phase_angle)
+            self._t = sympy.core.symbols('t')
+            self._angular_freq = angular_freq
+            self._phase_angle = phase_angle
+            self._I = peak_current*sympy.sin(self._angular_freq*self._t + self._phase_angle)
             self._name = sympy.core.symbols(name)
             
 class VoltageSource():
@@ -32,8 +34,10 @@ class VoltageSource():
     
     class AC():        
         def __init__(self, peak_voltage, angular_freq, phase_angle, name):
-            self._t = np.arange(0, 20, 0.01)
-            self._V = peak_voltage*np.sin(self._angular_freq*self._t + self._phase_angle)
+            self._t = sympy.core.symbols('t')
+            self._angular_freq = angular_freq
+            self._phase_angle = phase_angle
+            self._V = peak_voltage*sympy.sin(self._angular_freq*self._t + self._phase_angle)
             self._name = sympy.core.symbols(name)
 
 class Element():
@@ -41,17 +45,19 @@ class Element():
     class Resistor():
         
         def __init__(self, resistance, name):
-            self.resistance = resistance
+            self.property = resistance
             self._name = sympy.core.symbols(name)
 
     class Capacitor():
         def __init__(self, capacitance, name):
-            self.capacitance = capacitance
+            self.property = capacitance
+            name = "X" + str(name)
             self._name = sympy.core.symbols(name)
         
     class Inductor():
         def __init__(self, inductance, name):
-            self.inductance = inductance
+            self.property = inductance
+            name = "X" + str(name)
             self._name = sympy.core.symbols(name)
             
 class Circuit():
@@ -103,6 +109,7 @@ class Circuit():
                 temp_eq = 0
                 temp_eq_list = []
                 node_check = []
+                eq_list = []
                 
                 for i in range(len(self._node)):
                     current_node = (list(self._node[i].keys())[0][0], list(self._node[i].keys())[0][1])
@@ -115,7 +122,7 @@ class Circuit():
                         if current_node_ep == next_node_sp:
                             
                             if type(list(self._node[i].values())[0]) == CurrentSource.DC or type(list(self._node[i].values())[0]) == CurrentSource.AC:
-                                temp_eq = temp_eq + list(self._node[i].values())[0]._name
+                                temp_eq = temp_eq + list(self._node[i].values())[0]._I
                                 temp_eq_list.append(temp_eq)
                                 temp_eq = 0
                             else:   
@@ -125,21 +132,31 @@ class Circuit():
                                 node1 = sympy.core.symbols(node1)
                                 node2 = sympy.core.symbols(node2)
                                 
-                                if len(node_check) == 0:
-                                    node_check.append(node1)
-                                    node_check.append(node2)
-                                else:
-                                    if node1 == node_check[0] or node2 == node_check[1]:
-                                        impedance = list(self._node[i].values())[0]._name
-                                        temp_eq  = temp_eq - (node1 - node2)/impedance
-                                        temp_eq_list.append(temp_eq)
-                                    else:
-                                        impedance = list(self._node[i].values())[0]._name
-                                        temp_eq  = temp_eq - (node1 - node2)/impedance
-                                        temp_eq_list.append(temp_eq)
-                                        temp_eq = 0
-                                        node_check.clear()
-                                
-            return temp_eq_list
-                    
-                    
+                                impedance = list(self._node[i].values())[0].property
+                                temp_eq  = temp_eq + (node1 - node2)/impedance
+                                temp_eq_list.append(temp_eq)
+                                temp_eq = 0
+            
+            for i in range(len(temp_eq_list)):
+                if i == len(temp_eq_list)-1:
+                    eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[0]))
+                else:
+                    eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[i+1]))
+            
+            var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
+            var_tuple = tuple(var_list)
+            solution = sympy.linsolve(eq_list, var_tuple)
+    
+            last_node_eq = 0
+            solution_args = solution.args[0]
+            
+            for i in range(len(solution_args)):
+                last_node_eq = last_node_eq + solution_args[i]
+            
+            last_node_value = sympy.solve(last_node_eq)[0]
+            last_node_var = sympy.core.symbols('V' + str(len(self._node)-1))
+            solution_value = solution.subs(last_node_var, last_node_value)
+            solution_value = solution_value.args
+            solution_value = solution_value[0]
+            
+            return solution_value
