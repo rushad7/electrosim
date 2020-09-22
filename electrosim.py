@@ -74,8 +74,6 @@ class Circuit():
             self._node2 = node2
             self._element = element
             
-            # To add condition elem1 < > elem2
-            #element_index 
             if len(self._node) == 0:
                 self._temp_dict[str(self._node1) + str(self._node2)] = self._element
                 temp_dict_copy = self._temp_dict.copy()
@@ -100,15 +98,40 @@ class Circuit():
                 source_type = 'vs'
             
             return source_type
+        
+        def _checkMesh(self):
             
+            for i in range(len(self._node)):
+                if i != len(self._node) -1:
+                    if int(list(self._node[i].keys())[0][1]) == int(list(self._node[i+1].keys())[0][0]):
+                        check = True 
+                    else:
+                        print('Mesh continuity is broken. Check node values before solving')
+                        check = False
+                else:
+                    if int(list(self._node[i].keys())[0][1]) == int(list(self._node[0].keys())[0][0]):
+                        check = True
+                    else:
+                        print('Mesh continuity is broken. Check node values before solving')
+                        check = False
+                
+            return check
+        
         def solve(self):
+            check = self._checkMesh()
+            if check == True:
+                solution_value = self._solver()
+                return solution_value
+            else:
+                pass
+        
+        def _solver(self):
             
             source = self._getSource()
             if source == 'cs':
                     
                 temp_eq = 0
                 temp_eq_list = []
-                node_check = []
                 eq_list = []
                 
                 for i in range(len(self._node)):
