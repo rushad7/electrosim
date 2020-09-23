@@ -99,26 +99,43 @@ class Circuit():
             
             return source_type
         
-        def _checkMesh(self):
+        def _checkMesh(self, ret=False, disp=True):
             
-            for i in range(len(self._node)):
-                if i != len(self._node) -1:
-                    if int(list(self._node[i].keys())[0][1]) == int(list(self._node[i+1].keys())[0][0]):
-                        check = True 
+            if type(list(self._node[0].values())[0]) == CurrentSource.DC or type(list(self._node[0].values())[0]) == CurrentSource.AC:
+                for i in range(len(self._node)):
+                    
+                    if i != len(self._node) -1:
+                        if int(list(self._node[i].keys())[0][1]) == int(list(self._node[i+1].keys())[0][0]):
+                            check = True 
+                        else:
+                            check = False
+                            
                     else:
-                        print('Mesh continuity is broken. Check node values before solving')
-                        check = False
+                        if int(list(self._node[i].keys())[0][1]) == int(list(self._node[0].keys())[0][0]):
+                            check = True
+                        else:
+                            check = False
+                    
+                    if check == False:
+                        break
+                            
+                if check == True:
+                    if disp == True:
+                        if int(list(self._node[0].keys())[0][0]) == 0 and int(list(self._node[-1].keys())[0][1]) == 0:
+                            print('Mesh continuity is intact')
+                        else:
+                            print('Mesh starting from non zero node')
                 else:
-                    if int(list(self._node[i].keys())[0][1]) == int(list(self._node[0].keys())[0][0]):
-                        check = True
-                    else:
-                        print('Mesh continuity is broken. Check node values before solving')
-                        check = False
+                    print('Mesh continuity is broken. Check nodes before solving')
                 
-            return check
+                if ret == True:
+                    return check
+            else:
+                if disp == True:
+                    print('Make sure node 0-1 is always a source')
         
         def solve(self):
-            check = self._checkMesh()
+            check = self._checkMesh(ret=True)
             if check == True:
                 solution_value = self._solver()
                 return solution_value
