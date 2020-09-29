@@ -12,7 +12,7 @@ class CurrentSource():
     
     class DC():
         def __init__(self, current, name):
-            self._t = np.arange(0, 20, 0.01)
+            self._angular_freq = 0
             self._I = current
             self._name = sympy.core.symbols(name)
     
@@ -28,8 +28,8 @@ class VoltageSource():
     
     class DC():
         def __init__(self, voltage, name):
-            self._t = np.arange(0, 20, 0.01)
-            self._V = voltage*np.ones(len(self._t))
+            self._angular_freq = 0.0001
+            self._V = voltage
             self._name = sympy.core.symbols(name)
     
     class AC():        
@@ -67,24 +67,19 @@ class Circuit():
         def __init__(self):
             self._node = []
             self._temp_dict = {}
-            self._element_index = 0
             
         def add(self, element, node1, node2):
-            self._node1 = node1
-            self._node2 = node2
-            self._element = element
             
             if len(self._node) == 0:
-                self._temp_dict[str(self._node1) + str(self._node2)] = self._element
+                self._temp_dict[str(node1) + str(node2)] = element
                 temp_dict_copy = self._temp_dict.copy()
                 self._node.append(temp_dict_copy)
                 self._temp_dict.clear()
             else:
-                self._temp_dict[str(self._node1) + str(self._node2)] = self._element
+                self._temp_dict[str(node1) + str(node2)] = element
                 temp_dict_copy = self._temp_dict.copy()
                 self._node.append(temp_dict_copy)
                 self._temp_dict.clear()
-                self._element_index = self._element_index + 1
 
         def _getSource(self):
             
@@ -99,9 +94,9 @@ class Circuit():
             
             return source_type
         
-        def _checkMesh(self, ret=False, disp=True):
+        def checkMesh(self, ret=False, disp=True):
             
-            if type(list(self._node[0].values())[0]) == CurrentSource.DC or type(list(self._node[0].values())[0]) == CurrentSource.AC:
+            if type(list(self._node[0].values())[0]) == CurrentSource.DC or type(list(self._node[0].values())[0]) == CurrentSource.AC or type(list(self._node[0].values())[0]) == VoltageSource.DC or type(list(self._node[0].values())[0]) == VoltageSource.AC:
                 for i in range(len(self._node)):
                     
                     if i != len(self._node) -1:
@@ -134,19 +129,10 @@ class Circuit():
                 if disp == True:
                     print('Make sure node 0-1 is always a source')
         
-        def solve(self):
-            check = self._checkMesh(ret=True)
-            if check == True:
-                solution_value = self._solver()
-                return solution_value
-            else:
-                pass
-        
         def _solver(self):
             
-            source = self._getSource()
-            if source == 'cs':
-                    
+            def solverCS():
+                        
                 temp_eq = 0
                 temp_eq_list = []
                 eq_list = []
@@ -172,39 +158,166 @@ class Circuit():
                                 node1 = sympy.core.symbols(node1)
                                 node2 = sympy.core.symbols(node2)
                                 
-                                impedance = list(self._node[i].values())[0].property
+                                impedance = list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq
                                 temp_eq  = temp_eq + (node1 - node2)/impedance
                                 temp_eq_list.append(temp_eq)
                                 temp_eq = 0
-            
-            for i in range(len(temp_eq_list)):
-                if i == len(temp_eq_list)-1:
-                    eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[0]))
+                
+                for i in range(len(temp_eq_list)):
+                    if i == len(temp_eq_list)-1:
+                        eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[0]))
+                    else:
+                        eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[i+1]))
+                
+                var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
+                var_tuple = tuple(var_list)
+                solution = sympy.linsolve(eq_list, var_tuple)
+                
+                last_node_eq = 0
+                solution_args = solution.args[0]
+                
+                for i in range(len(solution_args)):
+                    last_node_eq = last_node_eq + solution_args[i]
+                
+                last_node_value = sympy.solve(last_node_eq)[0]
+                last_node_var = sympy.core.symbols('V' + str(len(self._node)-1))
+                
+                if type(last_node_value) == dict:
+                    last_node_value = last_node_value[last_node_var]
+                    solution_value = solution.subs(last_node_var, last_node_value)
+                    solution_value = solution_value.args
+                    solution_value = solution_value[0]
+                    pass
                 else:
-                    eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[i+1]))
+                    solution_value = solution.subs(last_node_var, last_node_value)
+                    solution_value = solution_value.args
+                    solution_value = solution_value[0]
+                
+                return solution_value
             
-            var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
-            var_tuple = tuple(var_list)
-            solution = sympy.linsolve(eq_list, var_tuple)
+            def solverVS():
+                
+                temp_eq = 0
+                temp_eq_list = []
+                
+                impdedance_total = self.impedance()
+                current_total = (list(self._node[0].values())[0]._V)/impdedance_total
+                
+                for i in range(len(self._node)):
+                    current_node = (list(self._node[i].keys())[0][0], list(self._node[i].keys())[0][1])
+                    current_node_ep = current_node[1]
+                    
+                    for j in range(len(self._node)):
+                        next_node = (list(self._node[j].keys())[0][0], list(self._node[j].keys())[0][1])
+                        next_node_sp = next_node[0]
+                        
+                        if current_node_ep == next_node_sp:
+                            
+                            if type(list(self._node[i].values())[0]) == VoltageSource.DC or type(list(self._node[i].values())[0]) == VoltageSource.AC:
+                                
+                                node1 = 'V' + str(current_node[0])
+                                node2 = 'V' + str(current_node[1])
+                                
+                                node1 = sympy.core.symbols(node1)
+                                node2 = sympy.core.symbols(node2)
+                                
+                                temp_eq  = temp_eq + node1 - node2 - list(self._node[0].values())[0]._V
+                                temp_eq_list.append(temp_eq)
+                                temp_eq = 0
+                                
+                            else:   
+                                node1 = 'V' + str(current_node[0])
+                                node2 = 'V' + str(current_node[1])
+                                
+                                node1 = sympy.core.symbols(node1)
+                                node2 = sympy.core.symbols(node2)
+                                
+                                t = sympy.core.symbols('t')
+                                
+                                if type(list(self._node[i].values())[0]) == Element.Resistor:    
+                                    temp_eq  = temp_eq + node1 - node2 - current_total*list(self._node[i].values())[0].property
+                                elif type(list(self._node[i].values())[0]) == Element.Capacitor:
+                                    xc = 1/(list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq)
+                                    temp_eq  = temp_eq + node1 - node2 - sympy.integrate(current_total,t)*xc
+                                elif type(list(self._node[i].values())[0]) == Element.Inductor:
+                                    xl = list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq
+                                    temp_eq  = temp_eq + node1 - node2 - ((sympy.integrate(current_total,t)*xl)/(2*np.pi))
+                                
+                                temp_eq_list.append(temp_eq)
+                                temp_eq = 0
+                
+                var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
+                var_tuple = tuple(var_list)
+                
+                if type(list(self._node[0].values())[0]) == VoltageSource.AC: 
+                    for i in range(len(self._node)):
+                        eq_ordered_list = temp_eq_list[i].as_ordered_terms()
+                        temp_eq = (eq_ordered_list[0] + eq_ordered_list[1])/(eq_ordered_list[2].args[0])
+                        temp_eq_list[i] = temp_eq
+                    '''
+                    solution = sympy.linsolve(temp_eq_list, var_tuple)
+                    solution = solution.args[0]
+                    solution_sum = sum(solution)
+                    last_var_value = list(self._node[0].values())[0]._V/solution_sum.args[0]
+                    solution = solution.subs(var_tuple[-1], last_var_value)
+                    '''
+                else:
+                    var_list.append(sympy.core.symbols('t'))
+                    var_tuple = tuple(var_list)
+                    solution = sympy.linsolve(temp_eq_list, var_tuple)
+                    solution = solution.args[0]
+                    last_var_value = sympy.solve(sum(solution))[0]
+                    solution = solution.subs(var_tuple[-2], last_var_value)
+                
+                return temp_eq_list, var_tuple
             
-            last_node_eq = 0
-            solution_args = solution.args[0]
             
-            for i in range(len(solution_args)):
-                last_node_eq = last_node_eq + solution_args[i]
+            source = self._getSource()
+            if source == 'cs':
+                solution_value = solverCS()
+                return solution_value
             
-            last_node_value = sympy.solve(last_node_eq)[0]
-            last_node_var = sympy.core.symbols('V' + str(len(self._node)-1))
-            
-            if type(last_node_value) == dict:
-                last_node_value = last_node_value[last_node_var]
-                solution_value = solution.subs(last_node_var, last_node_value)
-                solution_value = solution_value.args
-                solution_value = solution_value[0]
-                pass
+            elif source == 'vs':
+                solution_value = solverVS()
+                return solution_value
+                
+
+        def solve(self):
+            check = self.checkMesh(ret=True, disp=False)
+            if check == True:
+                solution_value = self._solver()
+                return solution_value
             else:
-                solution_value = solution.subs(last_node_var, last_node_value)
-                solution_value = solution_value.args
-                solution_value = solution_value[0]
+                print('Check Mesh node continuity')
+
+        def impedance(self, across_node=(0,1)):
             
-            return solution_value
+            r = 0
+            xc = 0
+            xl = 0
+            
+            for i in range(1, len(self._node)):
+                
+                if type(list(self._node[i].values())[0]) == Element.Resistor:
+                    r = r + list(self._node[i].values())[0].property
+                elif type(list(self._node[i].values())[0]) == Element.Capacitor:
+                    xc = xc + 1/(list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq)
+                elif type(list(self._node[i].values())[0]) == Element.Inductor:
+                    xl = xl + list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq
+            
+            if across_node != (0,1):
+                
+                impedance_across_element = self._node[across_node[0]][str(across_node[0])+str(across_node[1])]
+                
+                if type(impedance_across_element) == Element.Resistor:
+                    r_across = list(self._node[across_node[0]].values())[0].property
+                    r = r - r_across
+                elif type(impedance_across_element) == Element.Capacitor:
+                    xc_across = 1/(list(self._node[across_node[0]].values())[0].property*list(self._node[0].values())[0]._angular_freq)
+                    xc = xc - xc_across
+                elif type(impedance_across_element) == Element.Inductor:
+                    xl_across = list(self._node[across_node[0]].values())[0].property*list(self._node[0].values())[0]._angular_freq
+                    xl = xl - xl_across
+            
+            impedance = np.sqrt(r**2 + (xl-xc)**2)
+            return impedance
