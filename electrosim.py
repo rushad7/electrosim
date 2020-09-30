@@ -12,7 +12,7 @@ class CurrentSource():
     
     class DC():
         def __init__(self, current, name):
-            self._angular_freq = 0
+            self._angular_freq = 1
             self._I = current
             self._name = sympy.core.symbols(name)
     
@@ -28,7 +28,7 @@ class VoltageSource():
     
     class DC():
         def __init__(self, voltage, name):
-            self._angular_freq = 0.0001
+            self._angular_freq = 1
             self._V = voltage
             self._name = sympy.core.symbols(name)
     
@@ -158,21 +158,27 @@ class Circuit():
                                 node1 = sympy.core.symbols(node1)
                                 node2 = sympy.core.symbols(node2)
                                 
-                                impedance = list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq
+                                if type(list(self._node[i].values())[0]) == Element.Resistor:
+                                    impedance = list(self._node[i].values())[0].property
+                                elif type(list(self._node[i].values())[0]) == Element.Capacitor:
+                                    impedance = 1/(list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq)
+                                elif type(list(self._node[i].values())[0]) == Element.Inductor:
+                                    impedance = list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq
+                                    
                                 temp_eq  = temp_eq + (node1 - node2)/impedance
                                 temp_eq_list.append(temp_eq)
                                 temp_eq = 0
                 
                 for i in range(len(temp_eq_list)):
                     if i == len(temp_eq_list)-1:
-                        eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[0]))
+                        eq_list.append(temp_eq_list[i] + temp_eq_list[0])
                     else:
-                        eq_list.append(sympy.Eq(temp_eq_list[i], temp_eq_list[i+1]))
+                        eq_list.append(temp_eq_list[i] + temp_eq_list[i+1])
                 
                 var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
                 var_tuple = tuple(var_list)
                 solution = sympy.linsolve(eq_list, var_tuple)
-                
+                '''
                 last_node_eq = 0
                 solution_args = solution.args[0]
                 
@@ -192,7 +198,7 @@ class Circuit():
                     solution_value = solution.subs(last_node_var, last_node_value)
                     solution_value = solution_value.args
                     solution_value = solution_value[0]
-                
+                '''
                 return solution_value
             
             def solverVS():
@@ -241,7 +247,7 @@ class Circuit():
                                     temp_eq  = temp_eq + node1 - node2 - sympy.integrate(current_total,t)*xc
                                 elif type(list(self._node[i].values())[0]) == Element.Inductor:
                                     xl = list(self._node[i].values())[0].property*list(self._node[0].values())[0]._angular_freq
-                                    temp_eq  = temp_eq + node1 - node2 - ((sympy.integrate(current_total,t)*xl)/(2*np.pi))
+                                    temp_eq  = temp_eq + node1 - node2 - ((sympy.integrate(current_total,t)*xl)/(2*sympy.pi))
                                 
                                 temp_eq_list.append(temp_eq)
                                 temp_eq = 0
@@ -249,18 +255,22 @@ class Circuit():
                 var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
                 var_tuple = tuple(var_list)
                 
-                if type(list(self._node[0].values())[0]) == VoltageSource.AC: 
+                if type(list(self._node[0].values())[0]) == VoltageSource.AC:
+                    
+                    for i in range(len(self._node)):
+                        temp_eq_list[i] = temp_eq_list[i].rewrite(sympy.exp)
+                    
                     for i in range(len(self._node)):
                         eq_ordered_list = temp_eq_list[i].as_ordered_terms()
                         temp_eq = (eq_ordered_list[0] + eq_ordered_list[1])/(eq_ordered_list[2].args[0])
                         temp_eq_list[i] = temp_eq
-                    '''
+                
                     solution = sympy.linsolve(temp_eq_list, var_tuple)
                     solution = solution.args[0]
                     solution_sum = sum(solution)
                     last_var_value = list(self._node[0].values())[0]._V/solution_sum.args[0]
                     solution = solution.subs(var_tuple[-1], last_var_value)
-                    '''
+                    
                 else:
                     var_list.append(sympy.core.symbols('t'))
                     var_tuple = tuple(var_list)
@@ -269,7 +279,7 @@ class Circuit():
                     last_var_value = sympy.solve(sum(solution))[0]
                     solution = solution.subs(var_tuple[-2], last_var_value)
                 
-                return temp_eq_list, var_tuple
+                return solution
             
             
             source = self._getSource()
