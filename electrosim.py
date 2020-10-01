@@ -331,3 +331,130 @@ class Circuit():
             
             impedance = np.sqrt(r**2 + (xl-xc)**2)
             return impedance
+        
+class Gates():
+    
+    class AND():
+        
+        def __init__(self, *inputs):
+            
+            self.inputs = inputs
+            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
+            
+            def ElementWiseAnd(inputs):   
+                output = self.inputs[0]
+                for i in range(1,len(inputs)):
+                    output = output & self.inputs[i]
+                return output
+            
+            if len(self.inputs) >= 2:
+                self.output = ElementWiseAnd(self.inputs)
+            else:
+                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+                
+    class OR():
+        
+        def __init__(self, *inputs):
+            
+            self.inputs = inputs
+            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
+            
+            def ElementWiseOr(inputs):   
+                output = self.inputs[0]
+                for i in range(1,len(inputs)):
+                    output = output | self.inputs[i]
+                return output
+            
+            if len(self.inputs) >= 2:
+                self.output = ElementWiseOr(self.inputs)
+            else:
+                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+                
+    class NOT():
+        
+        def __init__(self, inputs):
+
+            self.inputs = inputs
+            
+            if self.inputs > 0:
+                self.inputs = 1
+            elif self.inputs <= 0:
+                self.inputs = 0
+                
+            self.output = int(not self.inputs)
+            
+    class XOR():
+        
+        def __init__(self, *inputs):
+            
+            self.inputs = inputs
+            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
+            
+            def ElementWiseXor(inputs):   
+                output = self.inputs[0]
+                for i in range(1,len(inputs)):
+                    output = output ^ self.inputs[i]
+                return output
+            
+            if len(self.inputs) >= 2:
+                self.output = ElementWiseXor(self.inputs)
+            else:
+                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+                
+    class NAND():
+        
+        def __init__(self, *inputs):
+            
+            self.inputs = inputs
+            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
+            
+            def ElementWiseNand(inputs):   
+                output = self.inputs[0]
+                for i in range(1,len(inputs)):
+                    output = int(not(output & self.inputs[i]))
+                return output
+            
+            if len(self.inputs) >= 2:
+                self.output = ElementWiseNand(self.inputs)
+            else:
+                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+                
+    class NOR():
+        
+        def __init__(self, *inputs):
+            
+            self.inputs = inputs
+            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
+            
+            def ElementWiseNor(inputs):   
+                output = self.inputs[0]
+                for i in range(1,len(inputs)):
+                    output = int(not(output | self.inputs[i]))
+                return output
+            
+            if len(self.inputs) >= 2:
+                self.output = ElementWiseNor(self.inputs)
+            else:
+                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+                
+    class XNOR():
+        
+        def __init__(self, *inputs):
+            
+            self.inputs = inputs
+            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
+            
+            def ElementWiseXnor(inputs):
+                output = self.inputs[0]
+                for i in range(1,len(inputs)):
+                    output = output ^ self.inputs[i]
+                
+                output = int(not(output))
+                return output 
+            
+            if len(self.inputs) >= 2:
+                self.output = ElementWiseXnor(self.inputs)
+            else:
+                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+        
+    
