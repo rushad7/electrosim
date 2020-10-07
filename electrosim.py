@@ -199,7 +199,7 @@ class Circuit():
                     solution_value = solution_value.args
                     solution_value = solution_value[0]
                 '''
-                return solution_value
+                return solution
             
             def solverVS():
                 
@@ -332,129 +332,135 @@ class Circuit():
             impedance = np.sqrt(r**2 + (xl-xc)**2)
             return impedance
         
-class Gates():
-    
-    class AND():
+    class Gates():
         
-        def __init__(self, *inputs):
-            
-            self.inputs = inputs
-            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
-            
-            def ElementWiseAnd(inputs):   
-                output = self.inputs[0]
-                for i in range(1,len(inputs)):
-                    output = output & self.inputs[i]
-                return output
-            
-            if len(self.inputs) >= 2:
-                self.output = ElementWiseAnd(self.inputs)
-            else:
-                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
-                
-    class OR():
-        
-        def __init__(self, *inputs):
-            
-            self.inputs = inputs
-            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
-            
-            def ElementWiseOr(inputs):   
-                output = self.inputs[0]
-                for i in range(1,len(inputs)):
-                    output = output | self.inputs[i]
-                return output
-            
-            if len(self.inputs) >= 2:
-                self.output = ElementWiseOr(self.inputs)
-            else:
-                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
-                
-    class NOT():
-        
-        def __init__(self, inputs):
+        def __init__(self):
+            self._connections = {}
 
-            self.inputs = inputs
+        def AND(self, input_connections, output_connections):
             
-            if self.inputs > 0:
-                self.inputs = 1
-            elif self.inputs <= 0:
-                self.inputs = 0
+            for i in range(len(input_connections)):
                 
-            self.output = int(not self.inputs)
+                if input_connections[i] not in self._connections:
+                    self._connections[input_connections[i]] = sympy.core.symbols(chr(64+input_connections[i]))
+                else:
+                    output = list(self._connections.values())[0]
+                    for i in range(1, len(input_connections)):
+                        output = output & self._connections[input_connections[i]]
+                    
+                    self._connections[output_connections] =  output
             
-    class XOR():
-        
-        def __init__(self, *inputs):
+            output = self._connections[input_connections[0]]
+            for i in range(1,len(input_connections)):
+                output = output & self._connections[input_connections[i]]
+                
+            self._connections[output_connections] = output
+                        
+        def OR(self, input_connections, output_connections):
             
-            self.inputs = inputs
-            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
+            for i in range(len(input_connections)):
+                
+                if input_connections[i] not in self._connections:
+                    self._connections[input_connections[i]] = sympy.core.symbols(chr(64+input_connections[i]))
+                else:
+                    output = list(self._connections.values())[0]
+                    for i in range(1, len(input_connections)):
+                        output = output | self._connections[input_connections[i]]
+                    
+                    self._connections[output_connections] =  output
             
-            def ElementWiseXor(inputs):   
-                output = self.inputs[0]
-                for i in range(1,len(inputs)):
-                    output = output ^ self.inputs[i]
-                return output
+            output = self._connections[input_connections[0]]
+            for i in range(1,len(input_connections)):
+                output = output | self._connections[input_connections[i]]
+                
+            self._connections[output_connections] = output
+
+        def NOT(self, input_connection, output_connection):
             
-            if len(self.inputs) >= 2:
-                self.output = ElementWiseXor(self.inputs)
+            if input_connection not in self._connections:
+                self._connections[input_connection] = sympy.core.symbols(chr(64+input_connection))
             else:
-                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+                output = ~self._connections[input_connection]
                 
-    class NAND():
-        
-        def __init__(self, *inputs):
+            self._connections[output_connection] =  output
             
-            self.inputs = inputs
-            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
-            
-            def ElementWiseNand(inputs):   
-                output = self.inputs[0]
-                for i in range(1,len(inputs)):
-                    output = int(not(output & self.inputs[i]))
-                return output
-            
-            if len(self.inputs) >= 2:
-                self.output = ElementWiseNand(self.inputs)
-            else:
-                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+            output = ~self._connections[input_connection]
+            self._connections[output_connection] = output
                 
-    class NOR():
-        
-        def __init__(self, *inputs):
+        def XOR(self, input_connections, output_connections):
             
-            self.inputs = inputs
-            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
-            
-            def ElementWiseNor(inputs):   
-                output = self.inputs[0]
-                for i in range(1,len(inputs)):
-                    output = int(not(output | self.inputs[i]))
-                return output
-            
-            if len(self.inputs) >= 2:
-                self.output = ElementWiseNor(self.inputs)
-            else:
-                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+            for i in range(len(input_connections)):
                 
-    class XNOR():
-        
-        def __init__(self, *inputs):
+                if input_connections[i] not in self._connections:
+                    self._connections[input_connections[i]] = sympy.core.symbols(chr(64+input_connections[i]))
+                else:
+                    output = list(self._connections.values())[0]
+                    for i in range(1, len(input_connections)):
+                        output = output ^ self._connections[input_connections[i]]
+                    
+                    self._connections[output_connections] =  output
             
-            self.inputs = inputs
-            self.inputs = [0 if i <= 0 else 1 for i in self.inputs]
-            
-            def ElementWiseXnor(inputs):
-                output = self.inputs[0]
-                for i in range(1,len(inputs)):
-                    output = output ^ self.inputs[i]
+            output = self._connections[input_connections[0]]
+            for i in range(1,len(input_connections)):
+                output = output ^ self._connections[input_connections[i]]
                 
-                output = int(not(output))
-                return output 
+            self._connections[output_connections] = output
+                    
+        def NAND(self, input_connections, output_connections):
             
-            if len(self.inputs) >= 2:
-                self.output = ElementWiseXnor(self.inputs)
-            else:
-                raise Exception('Gate requires 2 or more inputs. ' + str(len(self.inputs)) + ' given')
+            for i in range(len(input_connections)):
+                
+                if input_connections[i] not in self._connections:
+                    self._connections[input_connections[i]] = sympy.core.symbols(chr(64+input_connections[i]))
+                else:
+                    output = list(self._connections.values())[0]
+                    for i in range(1, len(input_connections)):
+                        output = ~(output & self._connections[input_connections[i]])
+                    
+                    self._connections[output_connections] =  output
+            
+            output = self._connections[input_connections[0]]
+            for i in range(1,len(input_connections)):
+                output = ~(output & self._connections[input_connections[i]])
+                
+            self._connections[output_connections] = output
+                    
+        def NOR(self, input_connections, output_connections):
+            
+            for i in range(len(input_connections)):
+                
+                if input_connections[i] not in self._connections:
+                    self._connections[input_connections[i]] = sympy.core.symbols(chr(64+input_connections[i]))
+                else:
+                    output = list(self._connections.values())[0]
+                    for i in range(1, len(input_connections)):
+                        output = ~(output | self._connections[input_connections[i]])
+                    
+                    self._connections[output_connections] =  output
+            
+            output = self._connections[input_connections[0]]
+            for i in range(1,len(input_connections)):
+                output = ~(output | self._connections[input_connections[i]])
+                
+            self._connections[output_connections] = output
+                    
+        def XNOR(self, input_connections, output_connections):
+            
+            for i in range(len(input_connections)):
+                
+                if input_connections[i] not in self._connections:
+                    self._connections[input_connections[i]] = sympy.core.symbols(chr(64+input_connections[i]))
+                else:
+                    output = list(self._connections.values())[0]
+                    for i in range(1, len(input_connections)):
+                        output = ~(output ^ self._connections[input_connections[i]])
+                    
+                    self._connections[output_connections] =  output
+            
+            output = self._connections[input_connections[0]]
+            for i in range(1,len(input_connections)):
+                output = ~(output ^ self._connections[input_connections[i]])
+                
+            self._connections[output_connections] = output
         
-    
+                    
