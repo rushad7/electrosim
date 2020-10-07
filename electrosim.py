@@ -176,29 +176,21 @@ class Circuit():
                         eq_list.append(temp_eq_list[i] + temp_eq_list[i+1])
                 
                 var_list = [sympy.core.symbols("V" + str(i)) for i in range(len(self._node))]
+                t = sympy.core.symbols('t')
+                var_list.append(t)
                 var_tuple = tuple(var_list)
-                solution = sympy.linsolve(eq_list, var_tuple)
-                '''
-                last_node_eq = 0
-                solution_args = solution.args[0]
                 
-                for i in range(len(solution_args)):
-                    last_node_eq = last_node_eq + solution_args[i]
+                if type(self._node[0]['01']) == CurrentSource.AC:
+                    solution = sympy.solve(eq_list, var_tuple)
                 
-                last_node_value = sympy.solve(last_node_eq)[0]
-                last_node_var = sympy.core.symbols('V' + str(len(self._node)-1))
+                last_node = solution[0][0]
+                eq = sum(solution[0][:-1]) - self._node[0]['01']._I
+                last_node_value = sympy.solve(eq, last_node)[0]
+                solution = list(solution[0][:-1])
                 
-                if type(last_node_value) == dict:
-                    last_node_value = last_node_value[last_node_var]
-                    solution_value = solution.subs(last_node_var, last_node_value)
-                    solution_value = solution_value.args
-                    solution_value = solution_value[0]
-                    pass
-                else:
-                    solution_value = solution.subs(last_node_var, last_node_value)
-                    solution_value = solution_value.args
-                    solution_value = solution_value[0]
-                '''
+                for i in range(len(solution)):
+                    solution[i] = solution[i].subs({last_node:last_node_value})
+                
                 return solution
             
             def solverVS():
