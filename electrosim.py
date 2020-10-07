@@ -183,15 +183,18 @@ class Circuit():
                 if type(self._node[0]['01']) == CurrentSource.AC:
                     solution = sympy.solve(eq_list, var_tuple)
                 
-                last_node = solution[0][0]
-                eq = sum(solution[0][:-1]) - self._node[0]['01']._I
-                last_node_value = sympy.solve(eq, last_node)[0]
-                solution = list(solution[0][:-1])
+                    last_node = solution[0][0]
+                    eq = sum(solution[0][:-1]) - self._node[0]['01']._I
+                    last_node_value = sympy.solve(eq, last_node)[0]
+                    solution = list(solution[0][:-1])
+                    
+                    for i in range(len(solution)):
+                        solution[i] = solution[i].subs({last_node:last_node_value})
                 
-                for i in range(len(solution)):
-                    solution[i] = solution[i].subs({last_node:last_node_value})
+                    return solution
                 
-                return solution
+                else:
+                    return eq_list
             
             def solverVS():
                 
