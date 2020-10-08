@@ -458,4 +458,22 @@ class Circuit():
                 
             self._connections[output_connections] = output
         
-                    
+        def Compute(self, **inputs):
+            
+            connection_values_list = list(self._connections.values())
+            var_list = list(inputs.keys())
+            value_list = list(inputs.values())
+            
+            for i in range(len(connection_values_list)):
+                for j in range(len(var_list)):
+                    connection_values_list[i] = connection_values_list[i].subs({var_list[j]:value_list[j]})
+                
+            return connection_values_list
+                
+        def Expr(self, connection=None):
+            
+            if connection == None:
+                return self._connections
+            else:
+                return self._connections[connection]
+            
